@@ -124,6 +124,7 @@ set bCheckIPsPassed 1
 set bCheckIPs 1
 if { $bCheckIPs == 1 } {
    set list_check_ips "\ 
+xilinx.com:user:adc_cont:1.0\
 xilinx.com:ip:axi_dma:7.1\
 digilentinc.com:ip:axi_dynclk:1.2\
 xilinx.com:ip:axi_gpio:2.0\
@@ -142,7 +143,6 @@ xilinx.com:ip:axi_intc:4.1\
 xilinx.com:ip:xlconcat:2.1\
 xilinx.com:ip:mig_7series:4.2\
 xilinx.com:ip:mult_gen:12.0\
-xilinx.com:user:my_new_ip:1.0\
 xilinx.com:user:oleds:1.0\
 digilentinc.com:ip:rgb2dvi:1.4\
 xilinx.com:ip:proc_sys_reset:5.0\
@@ -502,6 +502,9 @@ proc create_root_design { parentCell } {
    CONFIG.PHASE {0.0} \
  ] $sys_clk_i
 
+  # Create instance: adc_cont_0, and set properties
+  set adc_cont_0 [ create_bd_cell -type ip -vlnv xilinx.com:user:adc_cont:1.0 adc_cont_0 ]
+
   # Create instance: axi_dma_0, and set properties
   set axi_dma_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_dma:7.1 axi_dma_0 ]
   set_property -dict [ list \
@@ -756,9 +759,6 @@ proc create_root_design { parentCell } {
    CONFIG.PortBWidth {16} \
  ] $mult_gen_1
 
-  # Create instance: my_new_ip_0, and set properties
-  set my_new_ip_0 [ create_bd_cell -type ip -vlnv xilinx.com:user:my_new_ip:1.0 my_new_ip_0 ]
-
   # Create instance: oleds_0, and set properties
   set oleds_0 [ create_bd_cell -type ip -vlnv xilinx.com:user:oleds:1.0 oleds_0 ]
 
@@ -829,12 +829,12 @@ proc create_root_design { parentCell } {
   set xfft_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xfft:9.1 xfft_0 ]
   set_property -dict [ list \
    CONFIG.implementation_options {pipelined_streaming_io} \
-   CONFIG.number_of_stages_using_block_ram_for_data_and_phase_factors {3} \
+   CONFIG.number_of_stages_using_block_ram_for_data_and_phase_factors {5} \
    CONFIG.output_ordering {natural_order} \
    CONFIG.rounding_modes {truncation} \
    CONFIG.scaling_options {block_floating_point} \
    CONFIG.target_clock_frequency {100} \
-   CONFIG.transform_length {1024} \
+   CONFIG.transform_length {4096} \
    CONFIG.xk_index {true} \
  ] $xfft_0
 
@@ -864,6 +864,7 @@ proc create_root_design { parentCell } {
  ] $xlconstant_3
 
   # Create interface connections
+  connect_bd_intf_net -intf_net adc_cont_0_frame [get_bd_intf_pins adc_cont_0/frame] [get_bd_intf_pins xfft_0/S_AXIS_DATA]
   connect_bd_intf_net -intf_net axi_dma_0_M_AXIS_MM2S [get_bd_intf_pins axi_dma_0/M_AXIS_MM2S] [get_bd_intf_pins d_axi_i2s_audio_0/AXI_MM2S]
   connect_bd_intf_net -intf_net axi_dma_0_M_AXI_MM2S [get_bd_intf_pins axi_dma_0/M_AXI_MM2S] [get_bd_intf_pins axi_mem_intercon/S04_AXI]
   connect_bd_intf_net -intf_net axi_dma_0_M_AXI_S2MM [get_bd_intf_pins axi_dma_0/M_AXI_S2MM] [get_bd_intf_pins axi_mem_intercon/S05_AXI]
@@ -892,7 +893,6 @@ proc create_root_design { parentCell } {
   connect_bd_intf_net -intf_net microblaze_0_intc_axi [get_bd_intf_pins microblaze_0_axi_intc/s_axi] [get_bd_intf_pins microblaze_0_axi_periph/M00_AXI]
   connect_bd_intf_net -intf_net microblaze_0_interrupt [get_bd_intf_pins microblaze_0/INTERRUPT] [get_bd_intf_pins microblaze_0_axi_intc/interrupt]
   connect_bd_intf_net -intf_net mig_7series_0_DDR3 [get_bd_intf_ports DDR3] [get_bd_intf_pins mig_7series_0/DDR3]
-  connect_bd_intf_net -intf_net my_new_ip_0_frame [get_bd_intf_pins my_new_ip_0/frame] [get_bd_intf_pins xfft_0/S_AXIS_DATA]
   connect_bd_intf_net -intf_net rgb2dvi_0_TMDS [get_bd_intf_ports TMDS_OUT] [get_bd_intf_pins rgb2dvi_0/TMDS]
   connect_bd_intf_net -intf_net v_axi4s_vid_out_0_vid_io_out [get_bd_intf_pins rgb2dvi_0/RGB] [get_bd_intf_pins v_axi4s_vid_out_0/vid_io_out]
   connect_bd_intf_net -intf_net v_tc_0_vtiming_out [get_bd_intf_pins v_axi4s_vid_out_0/vtiming_in] [get_bd_intf_pins v_tc_0/vtiming_out]
@@ -907,7 +907,9 @@ proc create_root_design { parentCell } {
   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_nets Net]
   connect_bd_net -net SDATA_I_0_1 [get_bd_ports SDATA_I] [get_bd_pins d_axi_i2s_audio_0/SDATA_I]
   connect_bd_net -net SYS_Rst_1 [get_bd_pins microblaze_0_local_memory/SYS_Rst] [get_bd_pins rst_mig_7series_0_100M/bus_struct_reset]
-  connect_bd_net -net adc_sd_1 [get_bd_ports adc_sd] [get_bd_pins my_new_ip_0/adc_sd]
+  connect_bd_net -net adc_cont_0_adc_clk [get_bd_ports adc_clk] [get_bd_pins adc_cont_0/adc_clk]
+  connect_bd_net -net adc_cont_0_adc_cs [get_bd_ports adc_cs] [get_bd_pins adc_cont_0/adc_cs]
+  connect_bd_net -net adc_sd_1 [get_bd_ports adc_sd] [get_bd_pins adc_cont_0/adc_sd]
   connect_bd_net -net axi_dma_0_mm2s_introut [get_bd_pins axi_dma_0/mm2s_introut] [get_bd_pins microblaze_0_xlconcat/In6]
   connect_bd_net -net axi_dma_0_s2mm_introut [get_bd_pins axi_dma_0/s2mm_introut] [get_bd_pins microblaze_0_xlconcat/In7]
   connect_bd_net -net axi_dynclk_0_PXL_CLK_5X_O [get_bd_pins axi_dynclk_0/PXL_CLK_5X_O] [get_bd_pins rgb2dvi_0/SerialClk]
@@ -921,7 +923,7 @@ proc create_root_design { parentCell } {
   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_nets blk_mem_gen_0_doutb]
   connect_bd_net -net c_addsub_0_S [get_bd_pins blk_mem_gen_0/dina] [get_bd_pins c_addsub_0/S] [get_bd_pins system_ila_0/probe0]
   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_nets c_addsub_0_S]
-  connect_bd_net -net clk_wiz_0_clk_out1 [get_bd_pins clk_wiz_0/clk_out1] [get_bd_pins my_new_ip_0/clk_16MHz] [get_bd_pins system_ila_2/clk]
+  connect_bd_net -net clk_wiz_0_clk_out1 [get_bd_pins adc_cont_0/clk_16MHz] [get_bd_pins clk_wiz_0/clk_out1] [get_bd_pins system_ila_2/clk]
   connect_bd_net -net d_axi_i2s_audio_0_BCLK_O [get_bd_ports BCLK_O] [get_bd_pins d_axi_i2s_audio_0/BCLK_O]
   connect_bd_net -net d_axi_i2s_audio_0_LRCLK_O [get_bd_ports LRCLK_O] [get_bd_pins d_axi_i2s_audio_0/LRCLK_O]
   connect_bd_net -net d_axi_i2s_audio_0_MCLK_O [get_bd_ports MCLK_O] [get_bd_pins d_axi_i2s_audio_0/MCLK_O]
@@ -931,12 +933,10 @@ proc create_root_design { parentCell } {
   connect_bd_net -net mig_7series_0_mmcm_locked [get_bd_pins mig_7series_0/mmcm_locked] [get_bd_pins rst_mig_7series_0_100M/dcm_locked]
   connect_bd_net -net mig_7series_0_ui_addn_clk_0 [get_bd_pins axi_vdma_0/s_axis_s2mm_aclk] [get_bd_pins mig_7series_0/ui_addn_clk_0]
   connect_bd_net -net mig_7series_0_ui_addn_clk_2 [get_bd_pins mig_7series_0/clk_ref_i] [get_bd_pins mig_7series_0/ui_addn_clk_1]
-  connect_bd_net -net mig_7series_0_ui_clk [get_bd_pins axi_dma_0/m_axi_mm2s_aclk] [get_bd_pins axi_dma_0/m_axi_s2mm_aclk] [get_bd_pins axi_dma_0/s_axi_lite_aclk] [get_bd_pins axi_dynclk_0/REF_CLK_I] [get_bd_pins axi_dynclk_0/s_axi_lite_aclk] [get_bd_pins axi_gpio/s_axi_aclk] [get_bd_pins axi_iic_0/s_axi_aclk] [get_bd_pins axi_mem_intercon/ACLK] [get_bd_pins axi_mem_intercon/M00_ACLK] [get_bd_pins axi_mem_intercon/S00_ACLK] [get_bd_pins axi_mem_intercon/S01_ACLK] [get_bd_pins axi_mem_intercon/S02_ACLK] [get_bd_pins axi_mem_intercon/S03_ACLK] [get_bd_pins axi_mem_intercon/S04_ACLK] [get_bd_pins axi_mem_intercon/S05_ACLK] [get_bd_pins axi_timer_0/s_axi_aclk] [get_bd_pins axi_uartlite_0/s_axi_aclk] [get_bd_pins axi_vdma_0/m_axi_mm2s_aclk] [get_bd_pins axi_vdma_0/m_axi_s2mm_aclk] [get_bd_pins axi_vdma_0/s_axi_lite_aclk] [get_bd_pins blk_mem_gen_0/clka] [get_bd_pins blk_mem_gen_0/clkb] [get_bd_pins clk_wiz_0/clk_in1] [get_bd_pins d_axi_i2s_audio_0/AXI_L_aclk] [get_bd_pins d_axi_i2s_audio_0/CLK_100MHZ_I] [get_bd_pins d_axi_i2s_audio_0/M_AXIS_S2MM_ACLK] [get_bd_pins d_axi_i2s_audio_0/S_AXIS_MM2S_ACLK] [get_bd_pins microblaze_0/Clk] [get_bd_pins microblaze_0_axi_intc/processor_clk] [get_bd_pins microblaze_0_axi_intc/s_axi_aclk] [get_bd_pins microblaze_0_axi_periph/ACLK] [get_bd_pins microblaze_0_axi_periph/M00_ACLK] [get_bd_pins microblaze_0_axi_periph/M01_ACLK] [get_bd_pins microblaze_0_axi_periph/M02_ACLK] [get_bd_pins microblaze_0_axi_periph/M03_ACLK] [get_bd_pins microblaze_0_axi_periph/M04_ACLK] [get_bd_pins microblaze_0_axi_periph/M05_ACLK] [get_bd_pins microblaze_0_axi_periph/M06_ACLK] [get_bd_pins microblaze_0_axi_periph/M07_ACLK] [get_bd_pins microblaze_0_axi_periph/M08_ACLK] [get_bd_pins microblaze_0_axi_periph/M09_ACLK] [get_bd_pins microblaze_0_axi_periph/S00_ACLK] [get_bd_pins microblaze_0_local_memory/LMB_Clk] [get_bd_pins mig_7series_0/ui_clk] [get_bd_pins my_new_ip_0/clk_104MHz] [get_bd_pins oleds_0/clk] [get_bd_pins rst_mig_7series_0_100M/slowest_sync_clk] [get_bd_pins system_ila_0/clk] [get_bd_pins tone_match_0/clk] [get_bd_pins v_tc_0/s_axi_aclk] [get_bd_pins xfft_0/aclk]
+  connect_bd_net -net mig_7series_0_ui_clk [get_bd_pins adc_cont_0/clk_100MHz] [get_bd_pins axi_dma_0/m_axi_mm2s_aclk] [get_bd_pins axi_dma_0/m_axi_s2mm_aclk] [get_bd_pins axi_dma_0/s_axi_lite_aclk] [get_bd_pins axi_dynclk_0/REF_CLK_I] [get_bd_pins axi_dynclk_0/s_axi_lite_aclk] [get_bd_pins axi_gpio/s_axi_aclk] [get_bd_pins axi_iic_0/s_axi_aclk] [get_bd_pins axi_mem_intercon/ACLK] [get_bd_pins axi_mem_intercon/M00_ACLK] [get_bd_pins axi_mem_intercon/S00_ACLK] [get_bd_pins axi_mem_intercon/S01_ACLK] [get_bd_pins axi_mem_intercon/S02_ACLK] [get_bd_pins axi_mem_intercon/S03_ACLK] [get_bd_pins axi_mem_intercon/S04_ACLK] [get_bd_pins axi_mem_intercon/S05_ACLK] [get_bd_pins axi_timer_0/s_axi_aclk] [get_bd_pins axi_uartlite_0/s_axi_aclk] [get_bd_pins axi_vdma_0/m_axi_mm2s_aclk] [get_bd_pins axi_vdma_0/m_axi_s2mm_aclk] [get_bd_pins axi_vdma_0/s_axi_lite_aclk] [get_bd_pins blk_mem_gen_0/clka] [get_bd_pins blk_mem_gen_0/clkb] [get_bd_pins clk_wiz_0/clk_in1] [get_bd_pins d_axi_i2s_audio_0/AXI_L_aclk] [get_bd_pins d_axi_i2s_audio_0/CLK_100MHZ_I] [get_bd_pins d_axi_i2s_audio_0/M_AXIS_S2MM_ACLK] [get_bd_pins d_axi_i2s_audio_0/S_AXIS_MM2S_ACLK] [get_bd_pins microblaze_0/Clk] [get_bd_pins microblaze_0_axi_intc/processor_clk] [get_bd_pins microblaze_0_axi_intc/s_axi_aclk] [get_bd_pins microblaze_0_axi_periph/ACLK] [get_bd_pins microblaze_0_axi_periph/M00_ACLK] [get_bd_pins microblaze_0_axi_periph/M01_ACLK] [get_bd_pins microblaze_0_axi_periph/M02_ACLK] [get_bd_pins microblaze_0_axi_periph/M03_ACLK] [get_bd_pins microblaze_0_axi_periph/M04_ACLK] [get_bd_pins microblaze_0_axi_periph/M05_ACLK] [get_bd_pins microblaze_0_axi_periph/M06_ACLK] [get_bd_pins microblaze_0_axi_periph/M07_ACLK] [get_bd_pins microblaze_0_axi_periph/M08_ACLK] [get_bd_pins microblaze_0_axi_periph/M09_ACLK] [get_bd_pins microblaze_0_axi_periph/S00_ACLK] [get_bd_pins microblaze_0_local_memory/LMB_Clk] [get_bd_pins mig_7series_0/ui_clk] [get_bd_pins oleds_0/clk] [get_bd_pins rst_mig_7series_0_100M/slowest_sync_clk] [get_bd_pins system_ila_0/clk] [get_bd_pins tone_match_0/clk] [get_bd_pins v_tc_0/s_axi_aclk] [get_bd_pins xfft_0/aclk]
   connect_bd_net -net mig_7series_0_ui_clk_sync_rst [get_bd_pins mig_7series_0/ui_clk_sync_rst] [get_bd_pins rst_mig_7series_0_100M/ext_reset_in]
   connect_bd_net -net mult_gen_0_P [get_bd_pins c_addsub_0/B] [get_bd_pins mult_gen_0/P]
   connect_bd_net -net mult_gen_1_P [get_bd_pins c_addsub_0/A] [get_bd_pins mult_gen_1/P]
-  connect_bd_net -net my_new_ip_0_adc_clk [get_bd_ports adc_clk] [get_bd_pins my_new_ip_0/adc_clk]
-  connect_bd_net -net my_new_ip_0_adc_cs [get_bd_ports adc_cs] [get_bd_pins my_new_ip_0/adc_cs]
   connect_bd_net -net oleds_0_oled_dc [get_bd_ports oled_dc] [get_bd_pins oleds_0/oled_dc]
   connect_bd_net -net oleds_0_oled_res [get_bd_ports oled_res] [get_bd_pins oleds_0/oled_res]
   connect_bd_net -net oleds_0_oled_sclk [get_bd_ports oled_sclk] [get_bd_pins oleds_0/oled_sclk]
@@ -952,7 +952,7 @@ proc create_root_design { parentCell } {
   connect_bd_net -net tone_match_0_note_name [get_bd_pins oleds_0/actual_note] [get_bd_pins system_ila_0/probe2] [get_bd_pins tone_match_0/note_name]
   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_nets tone_match_0_note_name]
   connect_bd_net -net v_tc_0_irq [get_bd_pins microblaze_0_xlconcat/In2] [get_bd_pins v_tc_0/irq]
-  connect_bd_net -net xfft_0_event_tlast_missing [get_bd_pins my_new_ip_0/last_missing] [get_bd_pins xfft_0/event_tlast_missing]
+  connect_bd_net -net xfft_0_event_tlast_missing [get_bd_pins adc_cont_0/last_missing] [get_bd_pins xfft_0/event_tlast_missing]
   connect_bd_net -net xfft_0_m_axis_data_tdata [get_bd_pins imag_part/Din] [get_bd_pins real_part/Din] [get_bd_pins xfft_0/m_axis_data_tdata]
   connect_bd_net -net xfft_0_m_axis_data_tuser [get_bd_pins blk_mem_gen_0/addra] [get_bd_pins system_ila_0/probe1] [get_bd_pins xfft_0/m_axis_data_tuser]
   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_nets xfft_0_m_axis_data_tuser]
@@ -1000,4 +1000,5 @@ create_root_design ""
 
 
 common::send_gid_msg -ssname BD::TCL -id 2053 -severity "WARNING" "This Tcl script was generated from a block design that has not been validated. It is possible that design <$design_name> may result in errors during validation."
+
 
