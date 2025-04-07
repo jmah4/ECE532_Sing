@@ -2,6 +2,7 @@
 
 ## Design Tree
 ```
+├── Final Group Report.pdf //Our final report
 ├── README.md
 ├── adc_controller_decimator //IP repo for the ADC controller and decimator
 │   ├── README.md
@@ -10,6 +11,7 @@
 │   ├── NexysVideo_Master.xdc
 │   └── vdma_timing_workaround.xdc
 ├── create_project.tcl //Script for setting the IP repo locations and constraints files in a new project
+├── final demo.pptxi //The PPT we showed at the final demo
 ├── generate_bd.tcl //Creates the block diagram in project
 ├── hdmi_wrapper.bit //Pre-compiled bitstream
 ├── oleds //IP repo for the OLED IP
